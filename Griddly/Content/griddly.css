@@ -26,6 +26,11 @@
             white-space:nowrap;
         }
 
+        .griddly-init-flag[value=loaded] + .griddly.griddly-init
+        {
+            display:none
+        }
+
     .griddly th
     {
         background-color: #c8c8c8;
@@ -122,7 +127,8 @@
     display:block;border:none;box-shadow:none;position:relative;margin:0;
     width: 100%;
     max-height:400px;
-    overflow-y:auto
+    overflow-y:auto;
+    top:auto;
 }
 
 .filter-content .dropdown-menu li a

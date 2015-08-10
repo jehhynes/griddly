@@ -30,6 +30,65 @@
             count: this.options.count
         });
 
+        var isLoadingHistory = false;
+
+        if (window.history && history.replaceState && history.state && history.state.griddly)
+        {
+            var state = history.state.griddly[this.options.url];
+
+            if (state && state.filterValues)
+            {
+                if (this.$element.prev(".griddly-init-flag").val() == "loaded")
+                {
+                    try
+                    {
+                        isLoadingHistory = true;
+
+                        this.options.pageNumber = state.pageNumber;
+                        this.options.pageSize = state.pageSize;
+                        this.options.sortFields = state.sortFields;
+                        this.setFilterMode(state.filterMode, true);
+                        this.setFilterValues(state.filterValues, false, true);
+
+                        $("[data-griddly-sortfield], .griddly-filters-inline td", this.$element).removeClass("sorted_a sorted_d");
+
+                        if (this.options.sortFields)
+                        {
+                            for (var i = 0; i < this.options.sortFields.length; i++)
+                            {
+                                var sort = this.options.sortFields[i];
+
+                                var header = $("th[data-griddly-sortfield='" + sort.Field + "']", this.$element);
+                                var inlineFilter = $(".griddly-filters-inline")[0].cells[header[0].cellIndex];
+
+                                header.addClass(sort.Direction == "Ascending" ? "sorted_a" : "sorted_d");
+                                $(inlineFilter).addClass(sort.Direction == "Ascending" ? "sorted_a" : "sorted_d");
+                            }
+                        }
+
+                        this.refresh();
+                    }
+                    catch (e)
+                    {
+                        isLoadingHistory = false;
+                    }
+                }
+                else
+                {
+                    // user refreshed page, go back to defaults
+                    delete history.state.griddly[this.options.url];
+
+                    history.replaceState(history.state, document.title);
+                }
+            }
+        }
+
+        if (!isLoadingHistory)
+        {
+            this.$element.removeClass("griddly-init");
+            this.$element.prev(".griddly-init-flag").val("loaded");
+        }
+
         $("html").on("click", $.proxy(function (event)
         {
             if ($(event.target).parents('.popover.in').length == 0 && $(event.target).parents(".filter-trigger").length == 0 && !$(event.target).hasClass("filter-trigger"))
@@ -201,7 +260,11 @@
                 {
                     if (this.options.rowClickModal)
                     {
-                        $(this.options.rowClickModal).removeData("modal").modal({ remote: url });
+                        $(this.options.rowClickModal).removeData("bs.modal").modal({ show: false });
+                        $(".modal-content", this.options.rowClickModal).load($.trim(url), $.proxy(function (event)
+                        {
+                            $(this.options.rowClickModal).modal("show");
+                        }, this));
                     }
                     else
                     {
@@ -714,7 +777,7 @@
                 this.$element.find("tr.griddly-filters:not(tr.griddly-filters-" + this.options.filterMode.toLowerCase() + ")").hide();
                 this.$element.find("tr.griddly-filters-" + this.options.filterMode.toLowerCase()).show();
 
-                this.setFilterValues(currentFilters, true);
+                this.setFilterValues(currentFilters, true, true);
 
                 var request2 = this.buildRequest();
 
@@ -725,11 +788,11 @@
             }
         },
 
-        toggleFilterMode: function()
+        toggleFilterMode: function(noRefresh)
         {
             if (this.options.allowedFilterModes.length > 1)
             {
-                this.setFilterMode(this.options.filterMode == "Inline" ? "Form" : "Inline");
+                this.setFilterMode(this.options.filterMode == "Inline" ? "Form" : "Inline", noRefresh);
             }
         },
 
@@ -776,16 +839,20 @@
                         value = date.toLocaleDateString();
                         break;
                     case "Currency":
-                        value = value.toFixed(2);
+                        value = parseFloat(value).toFixed(2);
                         break;
                 }
             }
 
-            input.val([].concat(value));
+            if (input.parents(".griddly-filter").data("griddly-filter-isnoneall") && value == null)
+                input.prop("checked", false);
+            else
+                input.val([].concat(value));
+
             $(input[0]).change();
         },
 
-        setFilterValues: function(filters, isPatch)
+        setFilterValues: function(filters, isPatch, noRefresh)
         {
             this.options.autoRefreshOnFilter = false;
 
@@ -804,7 +871,11 @@
             this.$element.trigger("setfilters.griddly", filters);
             
             this.options.autoRefreshOnFilter = true;
-            this.refresh(true);
+
+            if (!noRefresh)
+            {
+                this.refresh(true);
+            }
         },
 
         resetFilterValues: function ()
@@ -862,6 +933,27 @@
             this.options.lastSelectedRow = null;
 
             var postData = this.buildRequest();
+
+            if (window.history && history.replaceState)
+            {
+                var state =
+                {
+                    pageNumber: this.options.pageNumber,
+                    pageSize: this.options.pageSize,
+                    sortFields: this.options.sortFields,
+                    filterMode: this.getFilterMode(),
+                    filterValues: this.getFilterValues()
+                };
+
+                var globalState = history.state || {};
+
+                if (!globalState.griddly)
+                    globalState.griddly = {};
+
+                globalState.griddly[this.options.url] = state;
+
+                history.replaceState(globalState, document.title);
+            }
 
             // TODO: cancel any outstanding calls
 
@@ -923,6 +1015,9 @@
                     pageSize: currentPageSize,
                     count: count
                 });
+
+                this.$element.removeClass("griddly-init");
+                this.$element.prev(".griddly-init-flag").val("loaded");
             }, this))
             .fail($.proxy(function (xhr, status, errorThrown)
             {
@@ -1020,7 +1115,7 @@
             return this;
     };
 
-    $.fn.griddly.defaults =
+    $.fn.griddly.defaults = $.extend({},
     {
         pageNumber: 0,
         pageSize: 20,
@@ -1032,7 +1127,7 @@
         autoRefreshOnFilter: true,
         filterMode: null,
         allowedFilterModes: []
-    };
+    }, $.fn.griddlyGlobalDefaults);
 
     function GriddlyButton()
     { }
@@ -1210,9 +1305,12 @@
         }
     };
 
-    $(function()
+    // $("[data-role=griddly]").griddly();
+
+    $(function ()
     {
         $("[data-role=griddly]").griddly();
+
         $(document).on("click", "[data-role=griddly-button]", GriddlyButton.handleClick);
 
         // patch bootstrap js so it doesn't .empty() our inline filter dropdowns

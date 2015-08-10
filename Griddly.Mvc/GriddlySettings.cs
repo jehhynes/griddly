@@ -26,6 +26,7 @@ namespace Griddly.Mvc
 
         public static Func<GriddlyButton, object> IconTemplate = null;
         public static Func<GriddlyResultPage, object> DefaultFooterTemplate = null;
+        public static Func<GriddlyResultPage, object> DefaultHeaderTemplate = null;
 
         /// <summary>
         /// Defines an event handler for custom export requests.
@@ -48,6 +49,7 @@ namespace Griddly.Mvc
             ClassName = DefaultClassName;
             TableClassName = DefaultTableClassName;
             FooterTemplate = DefaultFooterTemplate;
+            HeaderTemplate = DefaultHeaderTemplate;
             PageSize = DefaultPageSize;
             InitialFilterMode = DefaultInitialFilterMode;
             //AllowedFilterModes = DefaultAllowedFilterModes;
@@ -80,6 +82,7 @@ namespace Griddly.Mvc
         public Func<object, object> RowClass { get; set; }
 
         public Func<GriddlyResultPage, object> FooterTemplate { get; set; }
+        public Func<GriddlyResultPage, object> HeaderTemplate { get; set; }
 
         public Dictionary<string, Func<object, object>> RowIds { get; protected set; }
 
@@ -142,6 +145,38 @@ namespace Griddly.Mvc
             return this;
         }
 
+        public GriddlySettings FilterBox(string field, string caption, FilterDataType dataType = FilterDataType.Decimal, string htmlClass = null, string captionPlural = null)
+        {
+            return Add(GriddlyFilterExtensions.FilterBox(null, dataType, field, caption, htmlClass, captionPlural));
+        }
+
+        public GriddlySettings FilterRange(string field, string fieldEnd, string caption, FilterDataType dataType = FilterDataType.Decimal, string htmlClass = null, string captionPlural = null)
+        {
+            return Add(GriddlyFilterExtensions.FilterRange(null, dataType, field, fieldEnd, caption, htmlClass, captionPlural));
+        }
+
+        public GriddlySettings FilterList(string field, string caption, IEnumerable<SelectListItem> items, bool isMultiple = true, bool defaultSelectAll = false, string nullItemText = null, bool isNoneAll = true, string htmlClass = null, string captionPlural = null)
+        {
+            return Add(GriddlyFilterExtensions.FilterList(null, items, isMultiple, defaultSelectAll, nullItemText, isNoneAll, field, caption, htmlClass, captionPlural));
+        }
+
+        public GriddlySettings FilterEnum<T>(string field, string caption, bool isMultiple = true, bool defaultSelectAll = false, string nullItemText = null, bool isNoneAll = true, string htmlClass = null, string captionPlural = null)
+            where T : struct
+        {
+            return Add(GriddlyFilterExtensions.FilterEnum<T>(null, isMultiple, defaultSelectAll, nullItemText, isNoneAll, field, caption, htmlClass, captionPlural));
+        }
+
+        public GriddlySettings FilterEnum<T>(string field, string caption, IEnumerable<T> items, bool isMultiple = true, bool defaultSelectAll = false, string nullItemText = null, bool isNoneAll = true, string htmlClass = null, string captionPlural = null)
+            where T : struct
+        {
+            return Add(GriddlyFilterExtensions.FilterEnum<T>(null, items, isMultiple, defaultSelectAll, nullItemText, isNoneAll, field, caption, htmlClass, captionPlural));
+        }
+
+        public GriddlySettings FilterBool(string field, string caption, string trueLabel = "Yes", string falseLabel = "No", string nullItemText = null, bool isMultiple = false, bool defaultSelectAll = false, bool isNoneAll = false, string htmlClass = null, string captionPlural = null)
+        {
+            return Add(GriddlyFilterExtensions.FilterBool(null, trueLabel, falseLabel, nullItemText, isMultiple, defaultSelectAll, isNoneAll, field, caption, htmlClass, captionPlural));
+        }
+
         public GriddlySettings Add(GriddlyFilter filter)
         {
             Filters.Add(filter);
@@ -159,7 +194,7 @@ namespace Griddly.Mvc
                 });
         }*/
 
-        public GriddlySettings Button(Func<object, object> argumentTemplate, string caption, string icon = null, GriddlyButtonAction action = GriddlyButtonAction.Navigate, bool? enableOnSelection = null, string className = null, string target = null, string[] rowIds = null, object htmlAttributes = null)
+        public GriddlySettings Button(Func<object, object> argumentTemplate, string caption, string icon = null, GriddlyButtonAction action = GriddlyButtonAction.Navigate, bool? enableOnSelection = null, string className = null, string target = null, string[] rowIds = null, object htmlAttributes = null, bool appendRowIdsToUrl = false)
         {
             if (enableOnSelection == null)
                 enableOnSelection = (action == GriddlyButtonAction.Ajax || action == GriddlyButtonAction.AjaxBulk || action == GriddlyButtonAction.Post);
@@ -172,7 +207,8 @@ namespace Griddly.Mvc
                 Action = action,
                 EnableOnSelection = enableOnSelection.Value,
                 Target = target,
-                RowIds = rowIds
+                RowIds = rowIds,
+                AppendRowIdsToUrl = appendRowIdsToUrl
             };
 
             if (htmlAttributes != null)
@@ -181,7 +217,7 @@ namespace Griddly.Mvc
             return Add(button);
         }
 
-        public GriddlySettings Button(string argument, string caption, string icon = null, GriddlyButtonAction action = GriddlyButtonAction.Navigate, bool? enableOnSelection = null, string className = null, string target = null, string[] rowIds = null, object htmlAttributes = null)
+        public GriddlySettings Button(string argument, string caption, string icon = null, GriddlyButtonAction action = GriddlyButtonAction.Navigate, bool? enableOnSelection = null, string className = null, string target = null, string[] rowIds = null, object htmlAttributes = null, bool appendRowIdsToUrl = false)
         {
             if (enableOnSelection == null)
                 enableOnSelection = (action == GriddlyButtonAction.Ajax || action == GriddlyButtonAction.AjaxBulk || action == GriddlyButtonAction.Post);
@@ -194,7 +230,8 @@ namespace Griddly.Mvc
                 Action = action,
                 EnableOnSelection = enableOnSelection.Value,
                 Target = target,
-                RowIds = rowIds
+                RowIds = rowIds,
+                AppendRowIdsToUrl = appendRowIdsToUrl
             };
 
             if (htmlAttributes != null)
