@@ -99,16 +99,28 @@
 
         this.setSelectedCount = $.proxy(function ()
         {
-            $("thead tr td span .griddly-selection-count", this.$element).text(Object.keys(this.options.selectedRows).length);
+            $(".griddly-selection-count", this.$element).text(Object.keys(this.options.selectedRows).length);
 
             if (!$.isEmptyObject(this.options.selectedRows))
             {
-                this.$element.find("span.griddly-selection:not(:visible)").animate({ width: "show" }, 350);
+                var el = this.$element.find(".griddly-selection:not(:visible)");
+                
+                if (el.is("span"))
+                    el.animate({ width: "show" }, 350);
+                else
+                    el.show(350);
+                    
                 $(this.$element).find("[data-enable-on-selection=true]").removeClass("disabled");
             }
             else
             {
-                this.$element.find("span.griddly-selection:visible").animate({ width: "hide" }, 350);
+                var el = this.$element.find(".griddly-selection:visible");
+
+                if (el.is("span"))
+                    el.animate({ width: "hide" }, 350);
+                else
+                    el.hide(350);
+
                 $(this.$element).find("[data-enable-on-selection=true]").addClass("disabled");
             }
 
@@ -431,7 +443,7 @@
                     this.$element.find("input[name=_rowselect]").prop("checked", true).each(function () { setRowSelect($(this)); });
             }, this));
             
-            $(this.$element).on("click", "thead tr .griddly-selection-clear", $.proxy(function (event)
+            $(this.$element).on("click", ".griddly-selection-clear", $.proxy(function (event)
             {
                 this.clearSelected();
             }, this));
@@ -511,7 +523,7 @@
                         //else if (dataType == "Percent")
                         //    val += "%";
 
-                        if (val.indexOf(".00", val.length - 3) !== -1)
+                        if (val && val.indexOf(".00", val.length - 3) !== -1)
                             val = val.substr(0, val.length - 3);
 
                         return val;
@@ -1144,7 +1156,33 @@
         var clearSelectionOnAction = button.data("clear-selection-on-action");
         var rowIds = button.data("rowids");
 
-        if ((typeof confirmMessage === "undefined" || confirm(confirmMessage)))
+        var selection = {};
+
+        if (griddly.length)
+        {
+            selection = griddly.griddly("getSelected", rowIds);
+
+            if (selection.value)
+            {
+                selection.ids = selection.value;
+                delete selection.value;
+            }
+        }
+
+        var selectedCount = Object.keys(selection).length ? selection[Object.keys(selection)[0]].length : 0;
+        var templatedConfirmMessage;
+
+        if (typeof confirmMessage !== "undefined")
+        {
+            templatedConfirmMessage = confirmMessage.replace("${count}", selectedCount);
+
+            if (selectedCount == 1)
+                templatedConfirmMessage = templatedConfirmMessage.replace(/\${plural:.*?}/g, "").replace(/\${singular:(.*?)}/g, "$1");
+            else
+                templatedConfirmMessage = templatedConfirmMessage.replace(/\${singular:.*?}/g, "").replace(/\${plural:(.*?)}/g, "$1");;
+        }
+
+        if ((typeof confirmMessage === "undefined" || confirm(templatedConfirmMessage)))
         {
             if (button.triggerHandler("beforeExecute") !== false)
             {
@@ -1152,18 +1190,6 @@
                 {
                     if (!url)
                         url = button.attr("href");
-
-                    var selection = {};
-                    if (griddly.length)
-                    {
-                        selection = griddly.griddly("getSelected", rowIds);
-
-                        if (selection.value)
-                        {
-                            selection.ids = selection.value;
-                            delete selection.value;
-                        }
-                    }
 
                     if (clearSelectionOnAction && griddly.length)
                     {
@@ -1173,13 +1199,13 @@
                     switch (toggle)
                     {
                         case "ajaxbulk":
-                            if (Object.keys(selection).length && selection[Object.keys(selection)[0]].length == 0 && enableOnSelection)
+                            if (selectedCount == 0 && enableOnSelection)
                                 return;
 
                             return this.ajaxBulk(url, selection, button, griddly);
 
                         case "post":
-                            if (Object.keys(selection).length && selection[Object.keys(selection)[0]].length == 0 && enableOnSelection)
+                            if (selectedCount == 0 && enableOnSelection)
                                 return;
 
                             return this.post(url, selection, button, griddly);
@@ -1191,7 +1217,7 @@
                             return this.postCriteria(url, griddly.griddly("buildRequest"));
 
                         case "ajax":
-                            if (Object.keys(selection).length && selection[Object.keys(selection)[0]].length == 0 && enableOnSelection)
+                            if (selectedCount == 0 && enableOnSelection)
                                 return;
 
                             return this.ajax(url, selection, button, griddly);
@@ -1305,7 +1331,7 @@
         }
     };
 
-    // $("[data-role=griddly]").griddly();
+    //$("[data-role=griddly]").griddly();
 
     $(function ()
     {

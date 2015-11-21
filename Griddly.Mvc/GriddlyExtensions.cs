@@ -3,6 +3,8 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Text;
+using System.Threading;
 using System.Web;
 using System.Web.Mvc;
 using System.Web.Mvc.Html;
@@ -14,6 +16,14 @@ namespace Griddly.Mvc
 {
     public static class GriddlyExtensions
     {
+        public static string CurrencySymbol
+        {
+            get
+            {
+                return Thread.CurrentThread.CurrentCulture.NumberFormat.CurrencySymbol;
+            }
+        }
+
         public static MvcHtmlString Griddly(this HtmlHelper htmlHelper, string actionName)
         {
             return htmlHelper.Griddly(actionName, null);
@@ -104,6 +114,22 @@ namespace Griddly.Mvc
                 return null;
         }
 
+        // http://stackoverflow.com/a/18618808/8037
+        public static IHtmlString ToHtmlAttributes(this IDictionary<string, object> dictionary)
+        {
+            if (dictionary == null || dictionary.Count == 0)
+                return null;
+
+            var sb = new StringBuilder();
+
+            foreach (var kvp in dictionary)
+            {
+                sb.Append(string.Format("{0}=\"{1}\" ", HttpUtility.HtmlEncode(kvp.Key), HttpUtility.HtmlAttributeEncode(kvp.Value != null ? kvp.Value.ToString() : null)));
+            }
+
+            return new HtmlString(sb.ToString());
+        }
+
         public static void SetGriddlyDefault<T>(this Controller controller, ref T parameter, string field, T value)
         {
             if (controller.ControllerContext.IsChildAction)
@@ -186,7 +212,7 @@ namespace Griddly.Mvc
                         // values[value.Key] = (DateTime)value.Value; -- BAD: can't unbox a value type as a different type
                         values[value.Key] = Convert.ChangeType(value.Value, typeof(DateTime));
                     else if (t.IsArray || t.IsSubclassOf(typeof(IEnumerable)))
-                        values[value.Key] = string.Join(",", ((IEnumerable)value.Value).Cast<object>()); 
+                        values[value.Key] = string.Join(",", ((IEnumerable)value.Value).Cast<object>());
                 }
             }
 
