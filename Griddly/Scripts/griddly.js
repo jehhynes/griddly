@@ -190,6 +190,8 @@
             }
         };
 
+        this.clearSelected();
+
         $(this.$element).find("[data-enable-on-selection=true]").addClass("disabled");
 
         if (this.options.onRefresh)
@@ -234,7 +236,7 @@
                                 var sort = this.options.sortFields[i];
 
                                 var header = $("th[data-griddly-sortfield='" + sort.Field + "']", this.$element);
-                                var inlineFilter = $(".griddly-filters-inline")[0].cells[header[0].cellIndex];
+                                var inlineFilter = $(".griddly-filters-inline", this.$element)[0].cells[header[0].cellIndex];
 
                                 header.addClass(sort.Direction == "Ascending" ? "sorted_a" : "sorted_d");
                                 $(inlineFilter).addClass(sort.Direction == "Ascending" ? "sorted_a" : "sorted_d");
@@ -268,7 +270,7 @@
         {
             if (this.options.filterMode == "Inline" && $(event.target).parents('.popover.in').length == 0 && $(event.target).parents(".filter-trigger").length == 0 && !$(event.target).hasClass("filter-trigger"))
             {
-                $(".griddly-filters-inline .filter-trigger").each(function ()
+                $(".griddly-filters-inline .filter-trigger", this.$element).each(function ()
                 {
                     var filter = $(this);
 
@@ -277,44 +279,6 @@
                 });
             }
         }, this));
-
-        this.setSelectedCount = $.proxy(function ()
-        {
-            var count = Object.keys(this.options.selectedRows).length;
-
-            $(".griddly-selection-count", this.$element).text(count);
-
-            if (!$.isEmptyObject(this.options.selectedRows))
-            {
-                var el = this.$element.find(".griddly-selection");
-
-                if (el.is(":not(:visible)"))
-                {
-                    if (el.is("span"))
-                        el.animate({ width: "show" }, 350);
-                    else
-                        el.show(350);
-                }
-
-                this.$element.find(".griddly-selection-singular").toggle(count == 1);
-                this.$element.find(".griddly-selection-plural").toggle(count != 1);
-
-                $(this.$element).find("[data-enable-on-selection=true]").removeClass("disabled");
-            }
-            else
-            {
-                var el = this.$element.find(".griddly-selection:visible");
-
-                if (el.is("span"))
-                    el.animate({ width: "hide" }, 350);
-                else
-                    el.hide(350);
-
-                $(this.$element).find("[data-enable-on-selection=true]").addClass("disabled");
-            }
-
-            this.$element.triggerHandler("selectionchanged.griddly", [count, this.options.selectedRows]);
-        }, this);
 
         var self = this;
 
@@ -549,7 +513,7 @@
                     var currentDirection = currentPos != -1 ? this.options.sortFields[currentPos].Direction : "Descending";
                     var newDirection = currentDirection == "Descending" ? "Ascending" : "Descending";
 
-                    var inlineFilters = $("tr.griddly-filters-inline", this.element);
+                    var inlineFilters = $("tr.griddly-filters-inline", this.$element);
 
                     if (!this.options.isMultiSort || !event.ctrlKey)
                     {
@@ -863,7 +827,7 @@
                 $(el).popover({
                     html: true,
                     placement: "bottom",
-                    container: ".griddly-filters-inline",
+                    container: $(".griddly-filters-inline", this.$element),
                     template: '<div class="popover griddly-filter-popover"><div class="arrow"></div><h3 class="popover-title"></h3><div class="popover-content"></div></div>',
                     content: function ()
                     {
@@ -1577,6 +1541,44 @@
                 result[arrayIdNames[name]] = $.map(this.options.selectedRows, function (x) { return x[arrayIdNames[name]] });
 
             return result;
+        },
+
+        setSelectedCount: function ()
+        {
+            var count = Object.keys(this.options.selectedRows).length;
+
+            $(".griddly-selection-count", this.$element).text(count);
+
+            if (!$.isEmptyObject(this.options.selectedRows))
+            {
+                var el = this.$element.find(".griddly-selection");
+
+                if (el.is(":not(:visible)"))
+                {
+                    if (el.is("span"))
+                        el.animate({ width: "show" }, 350);
+                    else
+                        el.show(350);
+                }
+
+                $(this.$element).find("[data-enable-on-selection=true]").removeClass("disabled");
+            }
+            else
+            {
+                var el = this.$element.find(".griddly-selection:visible");
+
+                if (el.is("span"))
+                    el.animate({ width: "hide" }, 350);
+                else
+                    el.hide(350);
+
+                $(this.$element).find("[data-enable-on-selection=true]").addClass("disabled");
+            }
+
+            this.$element.find(".griddly-selection-singular").toggle(count == 1);
+            this.$element.find(".griddly-selection-plural").toggle(count != 1);
+
+            this.$element.triggerHandler("selectionchanged.griddly", [count, this.options.selectedRows]);
         },
 
         clearSelected: function ()
